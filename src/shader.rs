@@ -91,6 +91,19 @@ impl Program {
 
         Ok(Program { id })
     }
+
+    pub fn set_uniform(&self, key: &str, value: impl UniformValue) -> Result<(), Error> {
+        let key_c_str = CString::new(key)?;
+        let location = unsafe { gl::GetUniformLocation(self.id, key_c_str.as_ptr()) };
+
+        if location == -1 {
+            return Err(Error::Shader(ShaderError::UniformName(key.to_string())));
+        }
+
+        value.set(location);
+
+        Ok(())
+    }
 }
 
 impl Drop for Program {
@@ -100,6 +113,27 @@ impl Drop for Program {
         }
     }
 }
+
+pub trait UniformValue {
+    fn set(self, location: GLint);
+}
+
+macro_rules! uniform_value {
+    ($impl_type:ty, $fun:path, $gl_type:ty) => {
+        impl UniformValue for $impl_type {
+            fn set(self, location: GLint) {
+                unsafe {
+                    $fun(location, self as $gl_type);
+                }
+            }
+        }
+    };
+}
+
+uniform_value!(f32, gl::Uniform1f, GLfloat);
+uniform_value!(i32, gl::Uniform1i, GLint);
+uniform_value!(u32, gl::Uniform1ui, GLuint);
+uniform_value!(bool, gl::Uniform1i, GLint);
 
 fn make_shader(src: &str, variety: GLenum) -> Result<GLuint, Error> {
     let id = unsafe { gl::CreateShader(variety) };

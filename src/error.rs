@@ -16,4 +16,6 @@ pub enum ShaderError {
     Compilation(String),
     #[error("failed to link shader - {0}")]
     Linking(String),
+    #[error("could not find uniform with name '{0}'")]
+    UniformName(String),
 }

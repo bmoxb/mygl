@@ -18,6 +18,7 @@ fn main() -> Result<(), Error> {
     let vert = shader::Vertex::from_file("examples/shaders/triangle.vert")?;
     let frag = shader::Fragment::from_file("examples/shaders/triangle.frag")?;
     let prog = shader::Program::new(vert, frag)?;
+    prog.set_uniform("example", 10)?;
 
     el.run(move |event, _, control_flow| {
         match event {
