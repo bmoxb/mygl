@@ -28,6 +28,7 @@ fn main() -> Result<(), Error> {
                 _ => (),
             },
             Event::MainEventsCleared => {
+                mygl::clear(0.8, 0.2, 0.2, 1.0);
                 // ...
                 windowed_context.swap_buffers().unwrap();
             }
