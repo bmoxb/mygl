@@ -24,8 +24,9 @@ fn run(el: EventLoop<()>, windowed_context: ContextWrapper<PossiblyCurrent, glut
     let frag = FragmentShader::from_file("examples/shaders/triangle.frag")?;
     let prog = ShaderProgram::new(vert, frag)?;
 
-    let uniform = nalgebra::SVector::from([1.0, 0.8, 0.5]);
-    prog.set_uniform("myColour", uniform.as_ref())?;
+    let uniform = nalgebra::Matrix2x3::new(1.0, 2.0, 3.0,
+                                           4.0, 5.0, 6.0);
+    prog.set_uniform("myColour", uniform)?;
 
     el.run(move |event, _, control_flow| {
         match event {

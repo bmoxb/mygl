@@ -3,6 +3,9 @@ use std::path::Path;
 
 use gl::types::*;
 
+use seq_macro::seq;
+use paste::paste;
+
 use crate::error::{Error, ShaderError};
 
 #[allow(drop_bounds)]
@@ -137,11 +140,11 @@ macro_rules! uniform {
         }
     };
 
-    ($base_type:ty, $len:expr, $gl_type:ty, $fun:path) => {
+    ($base_type:ty, $len:expr, $fun_suffix:ident) => {
         impl UniformValue for &[$base_type; $len] {
             fn set(self, location: GLint) {
                 unsafe {
-                    $fun(location, $len, self.as_ptr());
+                    paste! { gl::[< Uniform $len $fun_suffix >](location, $len, self.as_ptr()); }
                 }
             }
         }
@@ -149,25 +152,54 @@ macro_rules! uniform {
 }
 
 uniform!(f32, GLfloat, gl::Uniform1f);
-// seq!(N in 1..=4 { uniform!(f32, N, GLfloat, gl::Uniform~N~fv); });
-uniform!(f32, 1, GLfloat, gl::Uniform1fv);
-uniform!(f32, 2, GLfloat, gl::Uniform2fv);
-uniform!(f32, 3, GLfloat, gl::Uniform3fv);
-uniform!(f32, 4, GLfloat, gl::Uniform4fv);
-
 uniform!(i32, GLint, gl::Uniform1i);
-uniform!(i32, 1, GLint, gl::Uniform1iv);
-uniform!(i32, 2, GLint, gl::Uniform2iv);
-uniform!(i32, 3, GLint, gl::Uniform3iv);
-uniform!(i32, 4, GLint, gl::Uniform4iv);
-
 uniform!(u32, GLuint, gl::Uniform1ui);
-uniform!(u32, 1, GLuint, gl::Uniform1uiv);
-uniform!(u32, 2, GLuint, gl::Uniform2uiv);
-uniform!(u32, 3, GLuint, gl::Uniform3uiv);
-uniform!(u32, 4, GLuint, gl::Uniform4uiv);
+
+seq!(N in 1..=4 {
+    uniform!(f32, N, fv);
+    uniform!(i32, N, iv);
+    uniform!(u32, N, uiv);
+});
 
 uniform!(bool, GLint, gl::Uniform1i);
+
+#[cfg(feature = "nalgebra")]
+mod nalgebra_uniforms {
+    use super::*;
+    use nalgebra as na;
+
+    macro_rules! gl_uniform_matrix {
+        (2, 2) => { paste! { gl::[< UniformMatrix2 fv >] } };
+        (3, 3) => { paste! { gl::[< UniformMatrix3 fv >] } };
+        (4, 4) => { paste! { gl::[< UniformMatrix4 fv >] } };
+        ($rows:expr, $columns:expr) => {
+            paste! { gl::[< UniformMatrix $rows x $columns fv >] }
+        };
+    }
+
+    macro_rules! uniform_matrix {
+        ($rows:expr, $columns:expr) => {
+            paste! {
+                impl<T> UniformValue for na::Matrix<f32, na::[< U $rows >], na::[< U $columns >], T>
+                where
+                    T: na::Storage<f32, na::[< U $rows >], na::[< U $columns >]>
+                {
+                    fn set(self, location: GLint) {
+                        unsafe {
+                            gl_uniform_matrix!($rows, $columns)(location, 1, gl::FALSE, self.as_ptr());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    seq!(R in 2..=4 {
+        seq!(C in 2..=4 {
+            uniform_matrix!(R, C);
+        });
+    });
+}
 
 fn make_shader(src: &str, variety: GLenum) -> Result<GLuint, Error> {
     let id = unsafe { gl::CreateShader(variety) };
