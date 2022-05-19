@@ -22,11 +22,11 @@ pub trait Shader: Drop {
     fn get_id(&self) -> GLuint;
 }
 
-pub struct Vertex {
+pub struct VertexShader {
     id: GLuint,
 }
 
-impl Shader for Vertex {
+impl Shader for VertexShader {
     fn from_source(src: &str) -> Result<Self, Error> {
         make_shader(src, gl::VERTEX_SHADER).map(|id| Self { id })
     }
@@ -36,7 +36,7 @@ impl Shader for Vertex {
     }
 }
 
-impl Drop for Vertex {
+impl Drop for VertexShader {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteShader(self.id);
@@ -44,11 +44,11 @@ impl Drop for Vertex {
     }
 }
 
-pub struct Fragment {
+pub struct FragmentShader {
     id: GLuint,
 }
 
-impl Shader for Fragment {
+impl Shader for FragmentShader {
     fn from_source(src: &str) -> Result<Self, Error> {
         make_shader(src, gl::FRAGMENT_SHADER).map(|id| Self { id })
     }
@@ -58,7 +58,7 @@ impl Shader for Fragment {
     }
 }
 
-impl Drop for Fragment {
+impl Drop for FragmentShader {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteShader(self.id);
@@ -66,12 +66,12 @@ impl Drop for Fragment {
     }
 }
 
-pub struct Program {
+pub struct ShaderProgram {
     id: GLuint,
 }
 
-impl Program {
-    pub fn new(vert: Vertex, frag: Fragment) -> Result<Self, Error> {
+impl ShaderProgram {
+    pub fn new(vert: VertexShader, frag: FragmentShader) -> Result<Self, Error> {
         let id = unsafe { gl::CreateProgram() };
 
         let mut success = gl::TRUE as GLint;
@@ -89,7 +89,7 @@ impl Program {
             return Err(Error::Shader(ShaderError::Linking("TODO".to_string())));
         }
 
-        Ok(Program { id })
+        Ok(ShaderProgram { id })
     }
 
     pub fn set_uniform(&self, key: &str, value: impl UniformValue) -> Result<(), Error> {
@@ -114,7 +114,7 @@ impl Program {
     }
 }
 
-impl Drop for Program {
+impl Drop for ShaderProgram {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteProgram(self.id);
