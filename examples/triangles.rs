@@ -18,7 +18,9 @@ fn main() -> Result<(), Error> {
     let vert = shader::Vertex::from_file("examples/shaders/triangle.vert")?;
     let frag = shader::Fragment::from_file("examples/shaders/triangle.frag")?;
     let prog = shader::Program::new(vert, frag)?;
-    prog.set_uniform("example", 10)?;
+
+    let uniform = nalgebra::SVector::from([1.0, 2.0]);
+    prog.set_uniform("example", uniform.as_ref())?;
 
     el.run(move |event, _, control_flow| {
         match event {

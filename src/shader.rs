@@ -1,7 +1,7 @@
-use gl::types::*;
-
 use std::ffi::CString;
 use std::path::Path;
+
+use gl::types::*;
 
 use crate::error::{Error, ShaderError};
 
@@ -93,6 +93,8 @@ impl Program {
     }
 
     pub fn set_uniform(&self, key: &str, value: impl UniformValue) -> Result<(), Error> {
+        self.use_program();
+
         let key_c_str = CString::new(key)?;
         let location = unsafe { gl::GetUniformLocation(self.id, key_c_str.as_ptr()) };
 
@@ -103,6 +105,12 @@ impl Program {
         value.set(location);
 
         Ok(())
+    }
+
+    fn use_program(&self) {
+        unsafe {
+            gl::UseProgram(self.id);
+        }
     }
 }
 
@@ -118,8 +126,8 @@ pub trait UniformValue {
     fn set(self, location: GLint);
 }
 
-macro_rules! uniform_value {
-    ($impl_type:ty, $fun:path, $gl_type:ty) => {
+macro_rules! uniform {
+    ($impl_type:ty, $gl_type:ty, $fun:path) => {
         impl UniformValue for $impl_type {
             fn set(self, location: GLint) {
                 unsafe {
@@ -128,12 +136,38 @@ macro_rules! uniform_value {
             }
         }
     };
+
+    ($base_type:ty, $len:expr, $gl_type:ty, $fun:path) => {
+        impl UniformValue for &[$base_type; $len] {
+            fn set(self, location: GLint) {
+                unsafe {
+                    $fun(location, $len, self.as_ptr());
+                }
+            }
+        }
+    };
 }
 
-uniform_value!(f32, gl::Uniform1f, GLfloat);
-uniform_value!(i32, gl::Uniform1i, GLint);
-uniform_value!(u32, gl::Uniform1ui, GLuint);
-uniform_value!(bool, gl::Uniform1i, GLint);
+uniform!(f32, GLfloat, gl::Uniform1f);
+// seq!(N in 1..=4 { uniform!(f32, N, GLfloat, gl::Uniform~N~fv); });
+uniform!(f32, 1, GLfloat, gl::Uniform1fv);
+uniform!(f32, 2, GLfloat, gl::Uniform2fv);
+uniform!(f32, 3, GLfloat, gl::Uniform3fv);
+uniform!(f32, 4, GLfloat, gl::Uniform4fv);
+
+uniform!(i32, GLint, gl::Uniform1i);
+uniform!(i32, 1, GLint, gl::Uniform1iv);
+uniform!(i32, 2, GLint, gl::Uniform2iv);
+uniform!(i32, 3, GLint, gl::Uniform3iv);
+uniform!(i32, 4, GLint, gl::Uniform4iv);
+
+uniform!(u32, GLuint, gl::Uniform1ui);
+uniform!(u32, 1, GLuint, gl::Uniform1uiv);
+uniform!(u32, 2, GLuint, gl::Uniform2uiv);
+uniform!(u32, 3, GLuint, gl::Uniform3uiv);
+uniform!(u32, 4, GLuint, gl::Uniform4uiv);
+
+uniform!(bool, GLint, gl::Uniform1i);
 
 fn make_shader(src: &str, variety: GLenum) -> Result<GLuint, Error> {
     let id = unsafe { gl::CreateShader(variety) };
