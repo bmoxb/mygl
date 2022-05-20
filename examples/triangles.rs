@@ -15,7 +15,7 @@ fn main() {
     let wb = WindowBuilder::new().with_title("Triangles");
 
     let windowed_context = ContextBuilder::new()
-        .with_gl(GlRequest::Specific(Api::OpenGl, (3, 3)))
+        .with_gl(GlRequest::Specific(Api::OpenGl, (4, 3)))
         .with_vsync(true)
         .build_windowed(wb, &el)
         .unwrap();
@@ -31,6 +31,8 @@ fn run(
     windowed_context: ContextWrapper<PossiblyCurrent, glutin::window::Window>,
 ) -> Result<(), mygl::Error> {
     gl::load_with(|ptr| windowed_context.get_proc_address(ptr) as *const _);
+
+    mygl::debug::set_error_callback(error_callback);
 
     let vert = VertexShader::from_file("examples/shaders/triangle.vert")?;
     let frag = FragmentShader::from_file("examples/shaders/triangle.frag")?;
@@ -66,4 +68,8 @@ fn run(
 
         _ => (),
     });
+}
+
+fn error_callback(msg: &str) {
+    eprintln!("OpenGL error: {}", msg);
 }

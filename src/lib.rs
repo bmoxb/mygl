@@ -1,3 +1,4 @@
+pub mod debug;
 pub mod error;
 pub mod shaders;
 pub mod vao;

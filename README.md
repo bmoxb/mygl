@@ -19,6 +19,8 @@ MyGL is in on-going development - see the section below for a list of planned (a
   * [x] Draw arrays
   * [ ] Draw elements
   * [ ] Draw textures
-* [ ] Debug logging
+* [ ] Debugging features
+  * [x] Allow setting a callback to be called on OpenGL error
+  * [ ] Log all OpenGL operations
 * [ ] Full documentation
 * [ ] End-to-end tests
