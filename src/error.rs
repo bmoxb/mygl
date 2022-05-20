@@ -2,7 +2,7 @@ use std::ffi::NulError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Failed to convert from Rust string type to C string: {0}")]
+    #[error("Failed to convert between Rust string type and C string: {0}")]
     CString(#[from] NulError),
     #[error("Shader error: {0}")]
     Shader(#[from] ShaderError),

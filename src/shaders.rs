@@ -3,8 +3,8 @@ use std::path::Path;
 
 use gl::types::*;
 
-use seq_macro::seq;
 use paste::paste;
+use seq_macro::seq;
 
 use crate::error::{Error, ShaderError};
 
@@ -77,6 +77,8 @@ impl ShaderProgram {
     pub fn new(vert: VertexShader, frag: FragmentShader) -> Result<Self, Error> {
         let id = unsafe { gl::CreateProgram() };
 
+        log::debug!("Created shader program {}", id);
+
         let mut success = gl::TRUE as GLint;
 
         unsafe {
@@ -84,13 +86,20 @@ impl ShaderProgram {
             gl::AttachShader(id, frag.get_id());
             gl::LinkProgram(id);
 
-            let success_ptr: *mut i32 = &mut success;
-            gl::GetProgramiv(id, gl::LINK_STATUS, success_ptr);
+            gl::GetProgramiv(id, gl::LINK_STATUS, &mut success);
         }
 
         if success as GLboolean == gl::FALSE {
-            return Err(Error::Shader(ShaderError::Linking("TODO".to_string())));
+            let msg = get_error_msg(id, gl::GetProgramiv, gl::GetProgramInfoLog)?;
+            return Err(Error::Shader(ShaderError::Linking(msg)));
         }
+
+        log::debug!(
+            "Attached and linked shaders {} and {} to shader program {}",
+            vert.get_id(),
+            frag.get_id(),
+            id
+        );
 
         Ok(ShaderProgram { id })
     }
@@ -105,15 +114,25 @@ impl ShaderProgram {
             return Err(Error::Shader(ShaderError::UniformName(key.to_string())));
         }
 
+        log::debug!(
+            "Setting uniform '{}' (location = {}) for shader program {} to value of type {}",
+            key,
+            location,
+            self.id,
+            value.ty()
+        );
+
         value.set(location);
 
         Ok(())
     }
 
-    fn use_program(&self) {
+    pub fn use_program(&self) {
         unsafe {
             gl::UseProgram(self.id);
         }
+
+        log::trace!("Using shader program {}", self.id);
     }
 }
 
@@ -127,6 +146,7 @@ impl Drop for ShaderProgram {
 
 pub trait UniformValue {
     fn set(self, location: GLint);
+    fn ty(&self) -> &str;
 }
 
 macro_rules! uniform {
@@ -137,6 +157,9 @@ macro_rules! uniform {
                     $fun(location, self as $gl_type);
                 }
             }
+            fn ty(&self) -> &str {
+                stringify!($impl_type)
+            }
         }
     };
 
@@ -144,8 +167,11 @@ macro_rules! uniform {
         impl UniformValue for &[$base_type; $len] {
             fn set(self, location: GLint) {
                 unsafe {
-                    paste! { gl::[< Uniform $len $fun_suffix >](location, $len, self.as_ptr()); }
+                    paste! { gl::[< Uniform $len $fun_suffix >](location, 1, self.as_ptr()); }
                 }
+            }
+            fn ty(&self) -> &str {
+                stringify!([$base_type; $len])
             }
         }
     };
@@ -169,9 +195,15 @@ mod nalgebra_uniforms {
     use nalgebra as na;
 
     macro_rules! gl_uniform_matrix {
-        (2, 2) => { paste! { gl::[< UniformMatrix2 fv >] } };
-        (3, 3) => { paste! { gl::[< UniformMatrix3 fv >] } };
-        (4, 4) => { paste! { gl::[< UniformMatrix4 fv >] } };
+        (2, 2) => {
+            paste! { gl::[< UniformMatrix2 fv >] }
+        };
+        (3, 3) => {
+            paste! { gl::[< UniformMatrix3 fv >] }
+        };
+        (4, 4) => {
+            paste! { gl::[< UniformMatrix4 fv >] }
+        };
         ($rows:expr, $columns:expr) => {
             paste! { gl::[< UniformMatrix $rows x $columns fv >] }
         };
@@ -189,6 +221,7 @@ mod nalgebra_uniforms {
                             gl_uniform_matrix!($rows, $columns)(location, 1, gl::FALSE, self.as_ptr());
                         }
                     }
+                    fn ty(&self) -> &str { stringify!(Matrix<f32, $rows, $columns>) }
                 }
             }
         }
@@ -219,8 +252,35 @@ fn make_shader(src: &str, variety: GLenum) -> Result<GLuint, Error> {
     }
 
     if success as GLboolean == gl::FALSE {
-        return Err(Error::Shader(ShaderError::Compilation("TODO".to_string())));
+        let msg = get_error_msg(id, gl::GetShaderiv, gl::GetShaderInfoLog)?;
+        return Err(Error::Shader(ShaderError::Compilation(msg)));
     }
 
+    log::debug!("Created and compiled shader {}", id);
+
     Ok(id)
+}
+
+fn get_error_msg(
+    id: GLuint,
+    get_iv: unsafe fn(GLuint, GLenum, *mut GLint),
+    get_log: unsafe fn(GLuint, GLsizei, *mut GLsizei, *mut GLchar),
+) -> Result<String, Error> {
+    let mut buffer;
+
+    unsafe {
+        let mut length = 0;
+        get_iv(id, gl::INFO_LOG_LENGTH, &mut length);
+
+        buffer = vec![0i8; length as usize];
+        get_log(id, length, &mut length, buffer.as_mut_ptr());
+
+        buffer.truncate(length as usize);
+    }
+
+    Ok(
+        CString::new::<Vec<u8>>(buffer.into_iter().map(|c| c as u8).collect())?
+            .into_string()
+            .unwrap(),
+    )
 }

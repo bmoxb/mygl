@@ -1,9 +1,8 @@
 pub mod error;
 pub mod shaders;
+pub mod vao;
 
 pub use error::Error;
-
-pub use shaders::{Shader, FragmentShader, VertexShader, ShaderProgram};
 
 pub fn clear(r: f32, g: f32, b: f32, a: f32) {
     unsafe {
