@@ -58,7 +58,7 @@ fn run(
             mygl::clear(0.8, 0.2, 0.2, 1.0);
 
             triangle_height += 0.002;
-            vbo.update_data(&[triangle_height], 7 * 4);
+            vbo.update_data(&[triangle_height], 7 * 4).unwrap();
 
             mygl::rendering::draw_arrays(&prog, &vao, DrawMode::Triangles, 0, 6);
 

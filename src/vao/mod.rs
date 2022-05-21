@@ -4,11 +4,12 @@ pub mod data_source;
 pub use builder::{AttribPointerType, VertexArrayObjectBuilder};
 pub use data_source::BufferDataSource;
 
-use std::cell::RefCell;
-use std::convert::{From, Into};
 use std::fmt;
-use std::hash::{Hash, Hasher};
 use std::rc::Rc;
+use std::cell::RefCell;
+use std::cmp::PartialEq;
+use std::convert::{From, Into};
+use std::hash::{Hash, Hasher};
 
 use gl::types::*;
 
@@ -67,7 +68,7 @@ impl fmt::Display for VertexArrayObject {
 pub type VertexBufferObject = BufferObject<{ BufferType::Vertex }>;
 pub type ElementBufferObject = BufferObject<{ BufferType::Element }>;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq)]
 pub struct BufferObject<const T: BufferType> {
     id: GLuint,
     inner: Rc<RefCell<BufferObjectInner>>,
@@ -76,6 +77,12 @@ pub struct BufferObject<const T: BufferType> {
 impl<const T: BufferType> Hash for BufferObject<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.id.hash(state);
+    }
+}
+
+impl<const T: BufferType> PartialEq for BufferObject<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
     }
 }
 
@@ -155,17 +162,7 @@ impl<const T: BufferType> BufferObject<T> {
             gl::BindBuffer(Into::into(T), self.id);
         }
 
-        log::debug!("Bound {}", self);
-    }
-}
-
-impl<const T: BufferType> Drop for BufferObject<T> {
-    fn drop(&mut self) {
-        log::debug!("Deleting {}", self);
-
-        unsafe {
-            gl::DeleteBuffers(1, &self.id);
-        }
+        log::trace!("Bound {}", self);
     }
 }
 
@@ -196,6 +193,16 @@ struct BufferObjectInner {
     id: GLuint,
     usage: BufferUsageHint,
     allocated_size: usize,
+}
+
+impl Drop for BufferObjectInner {
+    fn drop(&mut self) {
+        log::debug!("Deleting buffer object {}", self.id);
+
+        unsafe {
+            gl::DeleteBuffers(1, &self.id);
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, strum_macros::Display)]
