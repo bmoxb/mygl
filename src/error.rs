@@ -1,9 +1,11 @@
-use std::ffi::NulError;
+use std::ffi::{IntoStringError, NulError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Failed to convert between Rust string type and C string: {0}")]
-    CString(#[from] NulError),
+    #[error("Unexpected null byte found in C string: {0}")]
+    CStringNull(#[from] NulError),
+    #[error("Failed to convert C string into Rust string: {0}")]
+    CStringUTF8(#[from] IntoStringError),
     #[error("Shader error: {0}")]
     Shader(#[from] ShaderError),
 }

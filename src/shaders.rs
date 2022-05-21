@@ -1,4 +1,5 @@
 use std::ffi::CString;
+use std::fmt;
 use std::path::Path;
 
 use gl::types::*;
@@ -94,14 +95,16 @@ impl ShaderProgram {
             return Err(Error::Shader(ShaderError::Linking(msg)));
         }
 
+        let prog = ShaderProgram { id };
+
         log::debug!(
-            "Attached and linked shaders {} and {} to shader program {}",
+            "Attached and linked shaders {} and {} to {}",
             vert.get_id(),
             frag.get_id(),
-            id
+            prog
         );
 
-        Ok(ShaderProgram { id })
+        Ok(prog)
     }
 
     pub fn set_uniform(&self, key: &str, value: impl UniformValue) -> Result<(), Error> {
@@ -115,10 +118,10 @@ impl ShaderProgram {
         }
 
         log::debug!(
-            "Setting uniform '{}' (location = {}) for shader program {} to value of type {}",
+            "Setting uniform '{}' (location = {}) for {} to value of type {}",
             key,
             location,
-            self.id,
+            self,
             value.ty()
         );
 
@@ -132,7 +135,7 @@ impl ShaderProgram {
             gl::UseProgram(self.id);
         }
 
-        log::trace!("Using shader program {}", self.id);
+        log::trace!("Using {}", self);
     }
 }
 
@@ -141,6 +144,12 @@ impl Drop for ShaderProgram {
         unsafe {
             gl::DeleteProgram(self.id);
         }
+    }
+}
+
+impl fmt::Display for ShaderProgram {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "shader program {}", self.id)
     }
 }
 
@@ -278,9 +287,5 @@ fn get_error_msg(
         buffer.truncate(length as usize);
     }
 
-    Ok(
-        CString::new::<Vec<u8>>(buffer.into_iter().map(|c| c as u8).collect())?
-            .into_string()
-            .unwrap(),
-    )
+    Ok(CString::new::<Vec<u8>>(buffer.into_iter().map(|c| c as u8).collect())?.into_string()?)
 }

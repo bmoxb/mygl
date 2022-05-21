@@ -4,8 +4,6 @@ pub mod data_source;
 pub use builder::{AttribPointerType, VertexArrayObjectBuilder};
 pub use data_source::BufferDataSource;
 
-use crate::shaders::ShaderProgram;
-
 use std::rc::Rc;
 use std::{convert, fmt};
 
@@ -18,24 +16,6 @@ pub struct VertexArrayObject {
 }
 
 impl VertexArrayObject {
-    pub fn draw_arrays(&self, mode: DrawMode, first: i32, count: i32) {
-        self.bind();
-
-        log::trace!(
-            "Using vertex array object {} to draw {} vertices",
-            self.id,
-            count
-        );
-
-        unsafe {
-            gl::DrawArrays(mode.into(), first, count);
-        }
-    }
-
-    pub fn draw_elements() {
-        unimplemented!()
-    }
-
     fn new() -> Self {
         let mut id = 0;
 
@@ -43,27 +23,29 @@ impl VertexArrayObject {
             gl::GenVertexArrays(1, &mut id);
         }
 
-        log::debug!("Created vertex array object {}", id);
-
-        VertexArrayObject {
+        let vao = VertexArrayObject {
             id,
             ebo: None,
             vbos: Vec::new(),
-        }
+        };
+
+        log::debug!("Created {}", vao);
+
+        vao
     }
 
-    fn bind(&self) {
+    pub fn bind(&self) {
         unsafe {
             gl::BindVertexArray(self.id);
         }
 
-        log::trace!("Bound vertex array object {}", self.id);
+        log::trace!("Bound {}", self);
     }
 }
 
 impl Drop for VertexArrayObject {
     fn drop(&mut self) {
-        log::debug!("Deleting vertex array object {}", self.id);
+        log::debug!("Deleting {}", self);
 
         unsafe {
             gl::DeleteVertexArrays(1, &self.id);
@@ -71,19 +53,9 @@ impl Drop for VertexArrayObject {
     }
 }
 
-pub enum DrawMode {
-    Points,
-    Lines,
-    Triangles,
-}
-
-impl convert::Into<GLenum> for DrawMode {
-    fn into(self) -> GLenum {
-        match self {
-            DrawMode::Points => gl::POINTS,
-            DrawMode::Lines => gl::LINES,
-            DrawMode::Triangles => gl::TRIANGLES,
-        }
+impl fmt::Display for VertexArrayObject {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "vertex array object {}", self.id)
     }
 }
 
@@ -150,13 +122,15 @@ impl BufferObjectInner {
             );
         }
 
-        log::debug!("Created {} buffer object {}", buf_type, id);
-
-        BufferObjectInner {
+        let bo = BufferObjectInner {
             id,
             buf_type,
             usage,
-        }
+        };
+
+        log::debug!("Created {}", bo);
+
+        bo
     }
 
     fn bind(&self) {
@@ -164,17 +138,23 @@ impl BufferObjectInner {
             gl::BindBuffer(self.buf_type.into(), self.id);
         }
 
-        log::debug!("Bound {} buffer object {}", self.buf_type, self.id);
+        log::debug!("Bound {}", self);
     }
 }
 
 impl Drop for BufferObjectInner {
     fn drop(&mut self) {
-        log::debug!("Deleting {} buffer object {}", self.buf_type, self.id);
+        log::debug!("Deleting {}", self);
 
         unsafe {
             gl::DeleteBuffers(1, &self.id);
         }
+    }
+}
+
+impl fmt::Display for BufferObjectInner {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} buffer object {}", self.buf_type, self.id)
     }
 }
 

@@ -1,7 +1,6 @@
+use mygl::rendering::DrawMode;
 use mygl::shaders::{FragmentShader, Shader, ShaderProgram, VertexShader};
-use mygl::vao::{
-    AttribPointerType, BufferUsageHint, DrawMode, VertexArrayObjectBuilder, VertexBufferObject,
-};
+use mygl::vao::{AttribPointerType, BufferUsageHint, VertexArrayObjectBuilder, VertexBufferObject};
 
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::{ControlFlow, EventLoop};
@@ -60,8 +59,7 @@ fn run(
         Event::MainEventsCleared => {
             mygl::clear(0.8, 0.2, 0.2, 1.0);
 
-            prog.use_program();
-            vao.draw_arrays(DrawMode::Triangles, 0, 6);
+            mygl::rendering::draw_arrays(&prog, &vao, DrawMode::Triangles, 0, 6);
 
             windowed_context.swap_buffers().unwrap();
         }
