@@ -39,9 +39,9 @@ pub enum DrawMode {
     Triangles,
 }
 
-impl convert::Into<GLenum> for DrawMode {
-    fn into(self) -> GLenum {
-        match self {
+impl convert::From<DrawMode> for GLenum {
+    fn from(d: DrawMode) -> GLenum {
+        match d {
             DrawMode::Points => gl::POINTS,
             DrawMode::Lines => gl::LINES,
             DrawMode::Triangles => gl::TRIANGLES,

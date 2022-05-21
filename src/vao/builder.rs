@@ -18,9 +18,9 @@ pub enum AttribPointerType {
     Double,
 }
 
-impl convert::Into<GLenum> for AttribPointerType {
-    fn into(self) -> GLenum {
-        match self {
+impl convert::From<AttribPointerType> for GLenum {
+    fn from(a: AttribPointerType) -> GLenum {
+        match a {
             AttribPointerType::Byte => gl::BYTE,
             AttribPointerType::UnsignedByte => gl::UNSIGNED_BYTE,
             AttribPointerType::Short => gl::SHORT,

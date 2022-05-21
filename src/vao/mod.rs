@@ -91,9 +91,9 @@ pub enum BufferUsageHint {
     Dynamic,
 }
 
-impl convert::Into<GLenum> for BufferUsageHint {
-    fn into(self) -> GLenum {
-        match self {
+impl convert::From<BufferUsageHint> for GLenum {
+    fn from(b: BufferUsageHint) -> GLenum {
+        match b {
             BufferUsageHint::Static => gl::STATIC_DRAW,
             BufferUsageHint::Dynamic => gl::DYNAMIC_DRAW,
         }
@@ -164,9 +164,9 @@ enum BufferType {
     Element,
 }
 
-impl convert::Into<GLenum> for BufferType {
-    fn into(self) -> GLenum {
-        match self {
+impl convert::From<BufferType> for GLenum {
+    fn from(b: BufferType) -> GLenum {
+        match b {
             BufferType::Vertex => gl::ARRAY_BUFFER,
             BufferType::Element => gl::ELEMENT_ARRAY_BUFFER,
         }

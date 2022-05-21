@@ -50,7 +50,6 @@ fn run(
     //mygl::enable_wireframe_rendering();
 
     el.run(move |event, _, control_flow| match event {
-        Event::LoopDestroyed => return,
         Event::WindowEvent { event, .. } => match event {
             WindowEvent::Resized(physical_size) => windowed_context.resize(physical_size),
             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
