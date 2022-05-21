@@ -16,7 +16,7 @@ pub fn draw_arrays(
     vao.bind();
 
     log::trace!(
-        "Using {} and {} to draw {} vertices ({:?})",
+        "Using {} and {} to draw {} vertices as {}",
         prog,
         vao,
         count,
@@ -32,7 +32,8 @@ pub fn draw_elements() {
     unimplemented!()
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, strum_macros::Display)]
+#[strum(serialize_all = "snake_case")]
 pub enum DrawMode {
     Points,
     Lines,

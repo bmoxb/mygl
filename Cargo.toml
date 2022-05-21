@@ -9,6 +9,7 @@ thiserror = "1.0"
 seq-macro = "0.3"
 paste = "1.0"
 log = "0.4"
+strum_macros = "0.24"
 nalgebra = { version = "0.31", optional = true }
 
 [dev-dependencies]

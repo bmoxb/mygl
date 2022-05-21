@@ -85,7 +85,8 @@ impl ElementBufferObject {
     }
 }
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, strum_macros::Display)]
+#[strum(serialize_all = "snake_case")]
 pub enum BufferUsageHint {
     Static,
     Dynamic,
@@ -128,7 +129,7 @@ impl BufferObjectInner {
             usage,
         };
 
-        log::debug!("Created {}", bo);
+        log::debug!("Created {} for {} usage and initialised with {} bytes of data", bo, bo.usage, data.size());
 
         bo
     }
@@ -158,7 +159,8 @@ impl fmt::Display for BufferObjectInner {
     }
 }
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, strum_macros::Display)]
+#[strum(serialize_all = "snake_case")]
 enum BufferType {
     Vertex,
     Element,
@@ -169,15 +171,6 @@ impl convert::From<BufferType> for GLenum {
         match b {
             BufferType::Vertex => gl::ARRAY_BUFFER,
             BufferType::Element => gl::ELEMENT_ARRAY_BUFFER,
-        }
-    }
-}
-
-impl fmt::Display for BufferType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            BufferType::Vertex => write!(f, "vertex"),
-            BufferType::Element => write!(f, "element"),
         }
     }
 }
