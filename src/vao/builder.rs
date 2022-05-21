@@ -58,7 +58,7 @@ impl VertexArrayObjectBuilder {
         vao.bind();
 
         for (vbo, attrib_pointers) in &self.vbo_attrib_pointers {
-            vbo.inner.bind();
+            vbo.bind();
 
             for a in attrib_pointers {
                 unsafe {
@@ -80,7 +80,7 @@ impl VertexArrayObjectBuilder {
         vao.vbos = self.vbo_attrib_pointers.into_keys().collect();
 
         if let Some(ebo) = &self.ebo {
-            ebo.inner.bind();
+            ebo.bind();
         }
         vao.ebo = self.ebo;
 
@@ -94,7 +94,7 @@ impl VertexArrayObjectBuilder {
 
     pub fn attrib_pointer(
         mut self,
-        vbo: VertexBufferObject,
+        vbo: &VertexBufferObject,
         index: u32,
         size: i32,
         ty: AttribPointerType,
@@ -109,7 +109,7 @@ impl VertexArrayObjectBuilder {
             stride,
         };
         self.vbo_attrib_pointers
-            .entry(vbo)
+            .entry(vbo.clone())
             .or_insert_with(Vec::new)
             .push(attrib);
         self

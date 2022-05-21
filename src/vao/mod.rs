@@ -4,10 +4,15 @@ pub mod data_source;
 pub use builder::{AttribPointerType, VertexArrayObjectBuilder};
 pub use data_source::BufferDataSource;
 
+use std::cell::RefCell;
+use std::convert::{From, Into};
+use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
-use std::{convert, fmt};
 
 use gl::types::*;
+
+use crate::error::{BufferError, Error};
 
 pub struct VertexArrayObject {
     id: GLuint,
@@ -59,91 +64,102 @@ impl fmt::Display for VertexArrayObject {
     }
 }
 
-#[derive(Eq, PartialEq, Clone, Hash)]
-pub struct VertexBufferObject {
-    inner: Rc<BufferObjectInner>,
-}
+pub type VertexBufferObject = BufferObject<{ BufferType::Vertex }>;
+pub type ElementBufferObject = BufferObject<{ BufferType::Element }>;
 
-impl VertexBufferObject {
-    pub fn new(usage: BufferUsageHint, data: impl BufferDataSource) -> Self {
-        VertexBufferObject {
-            inner: Rc::new(BufferObjectInner::new(BufferType::Vertex, usage, data)),
-        }
-    }
-}
-
-#[derive(Eq, PartialEq, Clone, Hash)]
-pub struct ElementBufferObject {
-    inner: Rc<BufferObjectInner>,
-}
-
-impl ElementBufferObject {
-    pub fn new(usage: BufferUsageHint, data: impl BufferDataSource) -> Self {
-        ElementBufferObject {
-            inner: Rc::new(BufferObjectInner::new(BufferType::Element, usage, data)),
-        }
-    }
-}
-
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, strum_macros::Display)]
-#[strum(serialize_all = "snake_case")]
-pub enum BufferUsageHint {
-    Static,
-    Dynamic,
-}
-
-impl convert::From<BufferUsageHint> for GLenum {
-    fn from(b: BufferUsageHint) -> GLenum {
-        match b {
-            BufferUsageHint::Static => gl::STATIC_DRAW,
-            BufferUsageHint::Dynamic => gl::DYNAMIC_DRAW,
-        }
-    }
-}
-
-#[derive(Eq, PartialEq, Hash)]
-struct BufferObjectInner {
+#[derive(Clone, Eq, PartialEq)]
+pub struct BufferObject<const T: BufferType> {
     id: GLuint,
-    buf_type: BufferType,
-    usage: BufferUsageHint,
+    inner: Rc<RefCell<BufferObjectInner>>,
 }
 
-impl BufferObjectInner {
-    fn new(buf_type: BufferType, usage: BufferUsageHint, data: impl BufferDataSource) -> Self {
+impl<const T: BufferType> Hash for BufferObject<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl<const T: BufferType> BufferObject<T> {
+    pub fn new(data: impl BufferDataSource, usage: BufferUsageHint) -> Self {
         let mut id = 0;
 
         unsafe {
             gl::GenBuffers(1, &mut id);
-            gl::BindBuffer(buf_type.into(), id);
-            gl::BufferData(
-                buf_type.into(),
-                data.size() as GLsizeiptr,
-                data.ptr(),
-                usage.into(),
-            );
         }
 
-        let bo = BufferObjectInner {
+        let bo = BufferObject {
             id,
-            buf_type,
-            usage,
+            inner: Rc::new(RefCell::new(BufferObjectInner {
+                id,
+                usage,
+                allocated_size: 0,
+            })),
         };
 
-        log::debug!("Created {} for {} usage and initialised with {} bytes of data", bo, bo.usage, data.size());
+        log::debug!("Created {} for {} usage", bo, bo.inner.borrow().usage,);
+
+        bo.allocate_data(data);
 
         bo
     }
 
+    pub fn update_data(&self, data: impl BufferDataSource, offset: usize) -> Result<(), Error> {
+        if offset + data.size() > self.inner.borrow().allocated_size {
+            return Err(Error::Buffer(BufferError::DataUpdateExceedsBounds {
+                allocated_size: self.inner.borrow().allocated_size,
+                offset,
+                size: data.size(),
+            }));
+        }
+
+        self.bind();
+
+        unsafe {
+            gl::BufferSubData(
+                Into::into(T),
+                offset as GLintptr,
+                data.size() as GLsizeiptr,
+                data.ptr(),
+            );
+        }
+
+        log::trace!(
+            "Modified data in {} by setting {} bytes from offset {}",
+            self,
+            data.size(),
+            offset
+        );
+
+        Ok(())
+    }
+
+    pub fn allocate_data(&self, data: impl BufferDataSource) {
+        self.bind();
+
+        unsafe {
+            gl::BufferData(
+                Into::into(T),
+                data.size() as GLsizeiptr,
+                data.ptr(),
+                self.inner.borrow().usage.into(),
+            );
+        }
+
+        self.inner.borrow_mut().allocated_size = data.size();
+
+        log::debug!("Allocated {} bytes of data in {}", data.size(), self);
+    }
+
     fn bind(&self) {
         unsafe {
-            gl::BindBuffer(self.buf_type.into(), self.id);
+            gl::BindBuffer(Into::into(T), self.id);
         }
 
         log::debug!("Bound {}", self);
     }
 }
 
-impl Drop for BufferObjectInner {
+impl<const T: BufferType> Drop for BufferObject<T> {
     fn drop(&mut self) {
         log::debug!("Deleting {}", self);
 
@@ -153,24 +169,47 @@ impl Drop for BufferObjectInner {
     }
 }
 
-impl fmt::Display for BufferObjectInner {
+impl<const T: BufferType> fmt::Display for BufferObject<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} buffer object {}", self.buf_type, self.id)
+        write!(f, "{} buffer object {}", T, self.id)
     }
 }
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, strum_macros::Display)]
 #[strum(serialize_all = "snake_case")]
-enum BufferType {
+pub enum BufferType {
     Vertex,
     Element,
 }
 
-impl convert::From<BufferType> for GLenum {
+impl From<BufferType> for GLenum {
     fn from(b: BufferType) -> GLenum {
         match b {
             BufferType::Vertex => gl::ARRAY_BUFFER,
             BufferType::Element => gl::ELEMENT_ARRAY_BUFFER,
+        }
+    }
+}
+
+#[derive(Hash, Eq, PartialEq)]
+struct BufferObjectInner {
+    id: GLuint,
+    usage: BufferUsageHint,
+    allocated_size: usize,
+}
+
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug, strum_macros::Display)]
+#[strum(serialize_all = "snake_case")]
+pub enum BufferUsageHint {
+    Static,
+    Dynamic,
+}
+
+impl From<BufferUsageHint> for GLenum {
+    fn from(b: BufferUsageHint) -> GLenum {
+        match b {
+            BufferUsageHint::Static => gl::STATIC_DRAW,
+            BufferUsageHint::Dynamic => gl::DYNAMIC_DRAW,
         }
     }
 }

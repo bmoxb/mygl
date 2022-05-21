@@ -40,14 +40,13 @@ fn run(
     let uniform = [0.0, 0.2, 0.9];
     prog.set_uniform("myColour", &uniform)?;
 
-    let data: [f32; 9] = [-0.5, -0.5, 0.0, -0.5, 0.5, 0.0, 0.5, -0.5, 0.0];
-    let vbo = VertexBufferObject::new(BufferUsageHint::Static, &data);
+    let mut triangle_height = -0.25;
+    let data: [f32; 9] = [-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, triangle_height, 0.0];
+    let vbo = VertexBufferObject::new(&data, BufferUsageHint::Dynamic);
 
     let vao = VertexArrayObjectBuilder::new()
-        .attrib_pointer(vbo, 0, 3, AttribPointerType::Float, false, 3 * 4)
+        .attrib_pointer(&vbo, 0, 3, AttribPointerType::Float, false, 3 * 4)
         .build();
-
-    //mygl::enable_wireframe_rendering();
 
     el.run(move |event, _, control_flow| match event {
         Event::WindowEvent { event, .. } => match event {
@@ -57,6 +56,9 @@ fn run(
         },
         Event::MainEventsCleared => {
             mygl::clear(0.8, 0.2, 0.2, 1.0);
+
+            triangle_height += 0.002;
+            vbo.update_data(&[triangle_height], 7 * 4);
 
             mygl::rendering::draw_arrays(&prog, &vao, DrawMode::Triangles, 0, 6);
 
