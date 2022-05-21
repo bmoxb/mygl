@@ -41,7 +41,7 @@ fn run(
     prog.set_uniform("myColour", &uniform)?;
 
     let data: [f32; 9] = [-0.5, -0.5, 0.0, -0.5, 0.5, 0.0, 0.5, -0.5, 0.0];
-    let vbo = VertexBufferObject::new(BufferUsageHint::Static, data);
+    let vbo = VertexBufferObject::new(BufferUsageHint::Static, &data);
 
     let vao = VertexArrayObjectBuilder::new()
         .attrib_pointer(vbo, 0, 3, AttribPointerType::Float, false, 3 * 4)

@@ -6,9 +6,9 @@ pub trait BufferDataSource {
     fn size(&self) -> usize;
 }
 
-impl<T, const N: usize> BufferDataSource for [T; N] {
+impl<T, const N: usize> BufferDataSource for &[T; N] {
     fn ptr(&self) -> *const c_void {
-        let ptr = self as *const T;
+        let ptr = *self as *const T;
         ptr as *const c_void
     }
     fn size(&self) -> usize {
