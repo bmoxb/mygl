@@ -4,8 +4,8 @@ use shared::*;
 use mygl::rendering::{DrawMode, IndexType};
 use mygl::shaders::{FragmentShader, Shader, ShaderProgram, VertexShader};
 use mygl::vao::{
-    AttribPointerType, BufferUsageHint, ElementBufferObject, VertexArrayObjectBuilder,
-    VertexBufferObject,
+    BufferUsageHint, ElementBufferObject, VertexArrayObjectBuilder, VertexAttribute,
+    VertexAttributeType, VertexBufferObject,
 };
 
 example!(square);
@@ -34,7 +34,17 @@ fn square(
 
     let vao = VertexArrayObjectBuilder::new()
         .element_buffer_object(&ebo)
-        .attrib_pointer(&vbo, 0, 3, AttribPointerType::Float, false, 3 * 4)
+        .attribute(
+            &vbo,
+            VertexAttribute {
+                layout_index: 0,
+                component_count: 3,
+                component_type: VertexAttributeType::Float,
+                normalize: false,
+                stride: 3 * 4,
+                offset: 0,
+            },
+        )
         .build();
 
     el.run(move |event, _, control_flow| match event {

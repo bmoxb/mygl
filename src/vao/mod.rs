@@ -1,7 +1,7 @@
 pub mod builder;
 pub mod data_source;
 
-pub use builder::{AttribPointerType, VertexArrayObjectBuilder};
+pub use builder::*;
 pub use data_source::BufferDataSource;
 
 use std::cell::RefCell;

@@ -4,7 +4,10 @@ use shared::*;
 use mygl::rendering::DrawMode;
 use mygl::shaders::{FragmentShader, Shader, ShaderProgram, VertexShader};
 use mygl::textures::TextureBuilder2D;
-use mygl::vao::{AttribPointerType, BufferUsageHint, VertexArrayObjectBuilder, VertexBufferObject};
+use mygl::vao::{
+    BufferUsageHint, VertexArrayObjectBuilder, VertexAttribute, VertexAttributeType,
+    VertexBufferObject,
+};
 
 example!(texture);
 
@@ -28,8 +31,28 @@ fn texture(
     prog.set_uniform("myTexture", /*&texture*/ 0)?;
 
     let vao = VertexArrayObjectBuilder::new()
-        .attrib_pointer(&vbo, 0, 3, AttribPointerType::Float, false, 5 * 4, 0)
-        .attrib_pointer(&vbo, 1, 2, AttribPointerType::Float, false, 5 * 4, 3 * 4)
+        .attribute(
+            &vbo,
+            VertexAttribute {
+                layout_index: 0,
+                component_count: 3,
+                component_type: VertexAttributeType::Float,
+                normalize: false,
+                stride: 5 * 4,
+                offset: 0,
+            },
+        )
+        .attribute(
+            &vbo,
+            VertexAttribute {
+                layout_index: 1,
+                component_count: 2,
+                component_type: VertexAttributeType::Float,
+                normalize: false,
+                stride: 5 * 4,
+                offset: 3 * 4,
+            },
+        )
         .build();
 
     el.run(move |event, _, control_flow| match event {

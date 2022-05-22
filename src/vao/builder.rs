@@ -1,13 +1,14 @@
 use std::collections::HashMap;
-use std::convert;
 use std::ffi::c_void;
+use std::{convert, fmt};
 
 use gl::types::*;
 
 use super::{ElementBufferObject, VertexArrayObject, VertexBufferObject};
 
-#[derive(Copy, Clone, Debug)]
-pub enum AttribPointerType {
+#[derive(Copy, Clone, Debug, strum_macros::Display)]
+#[strum(serialize_all = "snake_case")]
+pub enum VertexAttributeType {
     Byte,
     UnsignedByte,
     Short,
@@ -19,35 +20,64 @@ pub enum AttribPointerType {
     Double,
 }
 
-impl convert::From<AttribPointerType> for GLenum {
-    fn from(a: AttribPointerType) -> GLenum {
+impl convert::From<VertexAttributeType> for GLenum {
+    fn from(a: VertexAttributeType) -> GLenum {
         match a {
-            AttribPointerType::Byte => gl::BYTE,
-            AttribPointerType::UnsignedByte => gl::UNSIGNED_BYTE,
-            AttribPointerType::Short => gl::SHORT,
-            AttribPointerType::UnsignedShort => gl::UNSIGNED_SHORT,
-            AttribPointerType::Int => gl::INT,
-            AttribPointerType::UnsignedInt => gl::UNSIGNED_INT,
-            AttribPointerType::HalfFloat => gl::HALF_FLOAT,
-            AttribPointerType::Float => gl::FLOAT,
-            AttribPointerType::Double => gl::DOUBLE,
+            VertexAttributeType::Byte => gl::BYTE,
+            VertexAttributeType::UnsignedByte => gl::UNSIGNED_BYTE,
+            VertexAttributeType::Short => gl::SHORT,
+            VertexAttributeType::UnsignedShort => gl::UNSIGNED_SHORT,
+            VertexAttributeType::Int => gl::INT,
+            VertexAttributeType::UnsignedInt => gl::UNSIGNED_INT,
+            VertexAttributeType::HalfFloat => gl::HALF_FLOAT,
+            VertexAttributeType::Float => gl::FLOAT,
+            VertexAttributeType::Double => gl::DOUBLE,
         }
     }
 }
 
-struct AttribPointer {
-    index: GLuint,
-    size: GLint,
-    ty: GLenum,
-    normalized: GLboolean,
-    stride: GLsizei,
-    offset: *const c_void,
+#[derive(Debug)]
+pub struct VertexAttribute {
+    pub layout_index: u32,
+    pub component_count: u32,
+    pub component_type: VertexAttributeType,
+    pub normalize: bool,
+    pub stride: u32,
+    pub offset: usize,
+}
+
+impl Default for VertexAttribute {
+    fn default() -> Self {
+        VertexAttribute {
+            layout_index: 0,
+            component_count: 1,
+            component_type: VertexAttributeType::Float,
+            normalize: false,
+            stride: 4,
+            offset: 0,
+        }
+    }
+}
+
+impl fmt::Display for VertexAttribute {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "vertex attribute {} ({} components of type {}, {}normalize, {} stride, {} offset",
+            self.layout_index,
+            self.component_count,
+            self.component_type,
+            if self.normalize { "" } else { "not " },
+            self.stride,
+            self.offset,
+        )
+    }
 }
 
 #[derive(Default)]
 pub struct VertexArrayObjectBuilder {
     ebo: Option<ElementBufferObject>,
-    vbo_attrib_pointers: HashMap<VertexBufferObject, Vec<AttribPointer>>,
+    vbo_attributes: HashMap<VertexBufferObject, Vec<VertexAttribute>>,
 }
 
 impl VertexArrayObjectBuilder {
@@ -59,27 +89,27 @@ impl VertexArrayObjectBuilder {
         let mut vao = VertexArrayObject::new();
         vao.bind();
 
-        for (vbo, attrib_pointers) in &self.vbo_attrib_pointers {
+        for (vbo, attrib_pointers) in &self.vbo_attributes {
             vbo.bind();
 
             for a in attrib_pointers {
                 unsafe {
                     gl::VertexAttribPointer(
-                        a.index,
-                        a.size,
-                        a.ty,
-                        a.normalized,
-                        a.stride,
-                        a.offset,
+                        a.layout_index,
+                        a.component_count as GLint,
+                        a.component_type.into(),
+                        a.normalize as GLboolean,
+                        a.stride as GLsizei,
+                        a.offset as *const c_void,
                     );
-                    gl::EnableVertexAttribArray(a.index);
+                    gl::EnableVertexAttribArray(a.layout_index);
                 }
 
-                log::debug!("Set up and enabled attribute {}", a.index);
+                log::debug!("Set up and enabled {}", a);
             }
         }
 
-        vao.vbos = self.vbo_attrib_pointers.into_keys().collect();
+        vao.vbos = self.vbo_attributes.into_keys().collect();
 
         if let Some(ebo) = &self.ebo {
             ebo.bind();
@@ -94,29 +124,11 @@ impl VertexArrayObjectBuilder {
         self
     }
 
-    pub fn attrib_pointer(
-        mut self,
-        vbo: &VertexBufferObject,
-        index: u32,
-        size: u32,
-        ty: AttribPointerType,
-        normalized: bool,
-        stride: u32,
-        offset: usize,
-    ) -> Self {
-        let attrib = AttribPointer {
-            index,
-            size: size as GLint,
-            ty: ty.into(),
-            normalized: normalized as GLboolean,
-            stride: stride as GLsizei,
-            offset: offset as *const c_void,
-        };
-
-        self.vbo_attrib_pointers
+    pub fn attribute(mut self, vbo: &VertexBufferObject, attribute: VertexAttribute) -> Self {
+        self.vbo_attributes
             .entry(vbo.clone())
             .or_insert_with(Vec::new)
-            .push(attrib);
+            .push(attribute);
 
         self
     }

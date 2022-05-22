@@ -3,7 +3,10 @@ use shared::*;
 
 use mygl::rendering::DrawMode;
 use mygl::shaders::{FragmentShader, Shader, ShaderProgram, VertexShader};
-use mygl::vao::{AttribPointerType, BufferUsageHint, VertexArrayObjectBuilder, VertexBufferObject};
+use mygl::vao::{
+    BufferUsageHint, VertexArrayObjectBuilder, VertexAttribute, VertexAttributeType,
+    VertexBufferObject,
+};
 
 example!(triangle);
 
@@ -25,7 +28,17 @@ fn triangle(
     let vbo = VertexBufferObject::new(&data, BufferUsageHint::Dynamic);
 
     let vao = VertexArrayObjectBuilder::new()
-        .attrib_pointer(&vbo, 0, 3, AttribPointerType::Float, false, 3 * 4, 0)
+        .attribute(
+            &vbo,
+            VertexAttribute {
+                layout_index: 0,
+                component_count: 3,
+                component_type: VertexAttributeType::Float,
+                normalize: false,
+                stride: 3 * 4,
+                offset: 0,
+            },
+        )
         .build();
 
     el.run(move |event, _, control_flow| match event {
