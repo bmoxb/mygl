@@ -15,4 +15,4 @@ jobs:
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: nightly
-    - run: cargo +nightly test --all-targets --verbose
+    - run: cargo +nightly test --all-features --all-targets --verbose

@@ -16,7 +16,7 @@ jobs:
       with:
         toolchain: nightly
         components: clippy
-    - run: cargo +nightly clippy --all-targets --verbose -- -D warnings
+    - run: cargo +nightly clippy --all-features --all-targets --verbose -- -D warnings
 
   fmt:
     runs-on: ubuntu-latest
