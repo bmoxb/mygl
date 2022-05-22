@@ -2,7 +2,7 @@ mod shared;
 use shared::*;
 
 use mygl::rendering::{DrawMode, IndexType};
-use mygl::shaders::{FragmentShader, Shader, ShaderProgram, VertexShader};
+use mygl::shaders::{FragmentShader, ShaderProgram, VertexShader};
 use mygl::vao::{
     BufferUsageHint, ElementBufferObject, VertexArrayObjectBuilder, VertexAttribute,
     VertexAttributeType, VertexBufferObject,

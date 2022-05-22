@@ -2,7 +2,7 @@ mod shared;
 use shared::*;
 
 use mygl::rendering::DrawMode;
-use mygl::shaders::{FragmentShader, Shader, ShaderProgram, VertexShader};
+use mygl::shaders::{FragmentShader, ShaderProgram, VertexShader};
 use mygl::textures::TextureBuilder2D;
 use mygl::vao::{
     BufferUsageHint, VertexArrayObjectBuilder, VertexAttribute, VertexAttributeType,

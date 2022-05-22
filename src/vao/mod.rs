@@ -98,12 +98,13 @@ impl<const T: BufferType> BufferObject<T> {
             id,
             inner: Rc::new(RefCell::new(BufferObjectInner {
                 id,
+                buf_type: T,
                 usage,
                 allocated_size: 0,
             })),
         };
 
-        log::debug!("Created {} for {} usage", bo, bo.inner.borrow().usage,);
+        log::debug!("Created {} for {} usage", bo, bo.inner.borrow().usage);
 
         bo.allocate_data(data);
 
@@ -191,13 +192,14 @@ impl From<BufferType> for GLenum {
 #[derive(Hash, Eq, PartialEq)]
 struct BufferObjectInner {
     id: GLuint,
+    buf_type: BufferType,
     usage: BufferUsageHint,
     allocated_size: usize,
 }
 
 impl Drop for BufferObjectInner {
     fn drop(&mut self) {
-        log::debug!("Deleting buffer object {}", self.id);
+        log::debug!("Deleting {} buffer object {}", self.buf_type, self.id);
 
         unsafe {
             gl::DeleteBuffers(1, &self.id);

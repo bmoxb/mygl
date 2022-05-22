@@ -9,63 +9,77 @@ use seq_macro::seq;
 
 use crate::error::{Error, ShaderError};
 
-#[allow(drop_bounds)]
-pub trait Shader: Drop {
-    fn from_source(src: &str) -> Result<Self, Error>
-    where
-        Self: Sized;
-
-    fn from_file(path: impl AsRef<Path>) -> Result<Self, Error>
-    where
-        Self: Sized,
-    {
-        let src = std::fs::read_to_string(path).map_err(|e| Error::Shader(ShaderError::from(e)))?;
-        Self::from_source(&src)
-    }
-
-    fn get_id(&self) -> GLuint;
-}
-
-pub struct VertexShader {
+pub struct Shader<const T: ShaderType> {
     id: GLuint,
 }
 
-impl Shader for VertexShader {
-    fn from_source(src: &str) -> Result<Self, Error> {
-        make_shader(src, gl::VERTEX_SHADER).map(|id| Self { id })
+impl<const T: ShaderType> Shader<T> {
+    pub fn from_source(src: &str) -> Result<Self, Error> {
+        let id = unsafe { gl::CreateShader(Into::into(T)) };
+
+        let src_c_str = CString::new(src)?;
+        let mut success = gl::TRUE as GLint;
+
+        unsafe {
+            let src_c_str_ptr: *const *const i8 = &src_c_str.as_ptr();
+            let null: *const i32 = std::ptr::null();
+
+            gl::ShaderSource(id, 1, src_c_str_ptr, null);
+            gl::CompileShader(id);
+
+            let success_ptr: *mut i32 = &mut success;
+            gl::GetShaderiv(id, gl::COMPILE_STATUS, success_ptr);
+        }
+
+        if success as GLboolean == gl::FALSE {
+            let msg = get_error_msg(id, gl::GetShaderiv, gl::GetShaderInfoLog)?;
+            return Err(Error::Shader(ShaderError::Compilation(msg)));
+        }
+
+        let shader = Self { id };
+
+        log::debug!("Created and compiled {}", shader);
+
+        Ok(shader)
     }
 
-    fn get_id(&self) -> GLuint {
-        self.id
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let src = std::fs::read_to_string(path).map_err(|e| Error::Shader(ShaderError::from(e)))?;
+        Self::from_source(&src)
     }
 }
 
-impl Drop for VertexShader {
+impl<const T: ShaderType> fmt::Display for Shader<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} shader {}", T, self.id)
+    }
+}
+
+impl<const T: ShaderType> Drop for Shader<T> {
     fn drop(&mut self) {
+        log::debug!("Deleting {}", self);
+
         unsafe {
             gl::DeleteShader(self.id);
         }
     }
 }
 
-pub struct FragmentShader {
-    id: GLuint,
+pub type VertexShader = Shader<{ ShaderType::Vertex }>;
+pub type FragmentShader = Shader<{ ShaderType::Fragment }>;
+
+#[derive(Eq, PartialEq, Copy, Clone, Debug, strum_macros::Display)]
+#[strum(serialize_all = "snake_case")]
+pub enum ShaderType {
+    Vertex,
+    Fragment,
 }
 
-impl Shader for FragmentShader {
-    fn from_source(src: &str) -> Result<Self, Error> {
-        make_shader(src, gl::FRAGMENT_SHADER).map(|id| Self { id })
-    }
-
-    fn get_id(&self) -> GLuint {
-        self.id
-    }
-}
-
-impl Drop for FragmentShader {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteShader(self.id);
+impl From<ShaderType> for GLenum {
+    fn from(s: ShaderType) -> GLenum {
+        match s {
+            ShaderType::Vertex => gl::VERTEX_SHADER,
+            ShaderType::Fragment => gl::FRAGMENT_SHADER,
         }
     }
 }
@@ -83,8 +97,8 @@ impl ShaderProgram {
         let mut success = gl::TRUE as GLint;
 
         unsafe {
-            gl::AttachShader(id, vert.get_id());
-            gl::AttachShader(id, frag.get_id());
+            gl::AttachShader(id, vert.id);
+            gl::AttachShader(id, frag.id);
             gl::LinkProgram(id);
 
             gl::GetProgramiv(id, gl::LINK_STATUS, &mut success);
@@ -97,12 +111,7 @@ impl ShaderProgram {
 
         let prog = ShaderProgram { id };
 
-        log::debug!(
-            "Attached and linked shaders {} and {} to {}",
-            vert.get_id(),
-            frag.get_id(),
-            prog
-        );
+        log::debug!("Attached and linked {} and {} to {}", vert, frag, prog);
 
         Ok(prog)
     }
@@ -118,11 +127,12 @@ impl ShaderProgram {
         }
 
         log::debug!(
-            "Setting uniform '{}' (location = {}) for {} to value of type {}",
+            "Setting uniform '{}' (location = {}) for {} to value {:?} (type {})",
             key,
             location,
             self,
-            value.ty()
+            value,
+            value.ty(),
         );
 
         value.set(location);
@@ -153,7 +163,7 @@ impl fmt::Display for ShaderProgram {
     }
 }
 
-pub trait UniformValue {
+pub trait UniformValue: fmt::Debug {
     fn set(self, location: GLint);
     fn ty(&self) -> &str;
 }
@@ -223,7 +233,7 @@ mod nalgebra_uniforms {
             paste! {
                 impl<T> UniformValue for na::Matrix<f32, na::[< U $rows >], na::[< U $columns >], T>
                 where
-                    T: na::Storage<f32, na::[< U $rows >], na::[< U $columns >]>
+                    T: fmt::Debug + na::Storage<f32, na::[< U $rows >], na::[< U $columns >]>
                 {
                     fn set(self, location: GLint) {
                         unsafe {
@@ -241,33 +251,6 @@ mod nalgebra_uniforms {
             uniform_matrix!(R, C);
         });
     });
-}
-
-fn make_shader(src: &str, variety: GLenum) -> Result<GLuint, Error> {
-    let id = unsafe { gl::CreateShader(variety) };
-
-    let src_c_str = CString::new(src)?;
-    let mut success = gl::TRUE as GLint;
-
-    unsafe {
-        let src_c_str_ptr: *const *const i8 = &src_c_str.as_ptr();
-        let null: *const i32 = std::ptr::null();
-
-        gl::ShaderSource(id, 1, src_c_str_ptr, null);
-        gl::CompileShader(id);
-
-        let success_ptr: *mut i32 = &mut success;
-        gl::GetShaderiv(id, gl::COMPILE_STATUS, success_ptr);
-    }
-
-    if success as GLboolean == gl::FALSE {
-        let msg = get_error_msg(id, gl::GetShaderiv, gl::GetShaderInfoLog)?;
-        return Err(Error::Shader(ShaderError::Compilation(msg)));
-    }
-
-    log::debug!("Created and compiled shader {}", id);
-
-    Ok(id)
 }
 
 fn get_error_msg(
