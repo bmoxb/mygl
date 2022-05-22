@@ -11,8 +11,10 @@ paste = "1.0"
 log = "0.4"
 strum_macros = "0.24"
 nalgebra = { version = "0.31", optional = true }
+image = { version = "0.24", optional = true }
 
 [dev-dependencies]
 glutin = "0.28"
-nalgebra = "0.31"
 env_logger = "0.8"
+nalgebra = "0.31"
+image = "0.24"

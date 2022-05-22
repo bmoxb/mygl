@@ -3,6 +3,7 @@ use std::{convert, ptr};
 use gl::types::*;
 
 use crate::shaders::ShaderProgram;
+use crate::textures::{Texture, TextureType};
 use crate::vao::VertexArrayObject;
 
 pub fn draw_arrays(
@@ -26,6 +27,21 @@ pub fn draw_arrays(
     unsafe {
         gl::DrawArrays(mode.into(), first, count);
     }
+}
+
+pub fn draw_arrays_with_textures<const T: TextureType>(
+    prog: &ShaderProgram,
+    vao: &VertexArrayObject,
+    mode: DrawMode,
+    first: i32,
+    count: i32,
+    textures: &[&Texture<{ T }>],
+) {
+    for (index, texture) in textures.iter().enumerate() {
+        texture.activate(index as u32);
+    }
+
+    draw_arrays(prog, vao, mode, first, count);
 }
 
 pub fn draw_elements(

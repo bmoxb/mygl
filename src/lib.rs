@@ -5,6 +5,7 @@ pub mod debug;
 pub mod error;
 pub mod rendering;
 pub mod shaders;
+pub mod textures;
 pub mod vao;
 
 pub use error::Error;

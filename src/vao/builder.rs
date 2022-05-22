@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::{convert, ptr};
+use std::convert;
+use std::ffi::c_void;
 
 use gl::types::*;
 
@@ -35,11 +36,12 @@ impl convert::From<AttribPointerType> for GLenum {
 }
 
 struct AttribPointer {
-    index: u32,
-    size: i32,
-    ty: AttribPointerType,
-    normalized: bool,
-    stride: i32,
+    index: GLuint,
+    size: GLint,
+    ty: GLenum,
+    normalized: GLboolean,
+    stride: GLsizei,
+    offset: *const c_void,
 }
 
 #[derive(Default)]
@@ -65,10 +67,10 @@ impl VertexArrayObjectBuilder {
                     gl::VertexAttribPointer(
                         a.index,
                         a.size,
-                        a.ty.into(),
-                        a.normalized as GLboolean,
+                        a.ty,
+                        a.normalized,
                         a.stride,
-                        ptr::null(),
+                        a.offset,
                     );
                     gl::EnableVertexAttribArray(a.index);
                 }
@@ -96,22 +98,26 @@ impl VertexArrayObjectBuilder {
         mut self,
         vbo: &VertexBufferObject,
         index: u32,
-        size: i32,
+        size: u32,
         ty: AttribPointerType,
         normalized: bool,
-        stride: i32,
+        stride: u32,
+        offset: usize,
     ) -> Self {
         let attrib = AttribPointer {
             index,
-            size,
-            ty,
-            normalized,
-            stride,
+            size: size as GLint,
+            ty: ty.into(),
+            normalized: normalized as GLboolean,
+            stride: stride as GLsizei,
+            offset: offset as *const c_void,
         };
+
         self.vbo_attrib_pointers
             .entry(vbo.clone())
             .or_insert_with(Vec::new)
             .push(attrib);
+
         self
     }
 }
