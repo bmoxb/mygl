@@ -87,8 +87,8 @@ impl VertexArrayObjectBuilder {
         vao
     }
 
-    pub fn element_buffer_object(mut self, ebo: ElementBufferObject) -> Self {
-        self.ebo = Some(ebo);
+    pub fn element_buffer_object(mut self, ebo: &ElementBufferObject) -> Self {
+        self.ebo = Some(ebo.clone());
         self
     }
 

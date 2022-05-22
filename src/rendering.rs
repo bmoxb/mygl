@@ -1,4 +1,4 @@
-use std::convert;
+use std::{convert, ptr};
 
 use gl::types::*;
 
@@ -16,7 +16,7 @@ pub fn draw_arrays(
     vao.bind();
 
     log::trace!(
-        "Using {} and {} to draw {} vertices as {}",
+        "Using {} and {} to draw {} vertices as {} (arrays)",
         prog,
         vao,
         count,
@@ -28,8 +28,44 @@ pub fn draw_arrays(
     }
 }
 
-pub fn draw_elements() {
-    unimplemented!()
+pub fn draw_elements(
+    prog: &ShaderProgram,
+    vao: &VertexArrayObject,
+    index_type: IndexType,
+    mode: DrawMode,
+    count: i32,
+) {
+    prog.use_program();
+    vao.bind();
+
+    log::trace!(
+        "Using {} and {} to draw {} vertices as {} (elements)",
+        prog,
+        vao,
+        count,
+        mode
+    );
+
+    unsafe {
+        gl::DrawElements(mode.into(), count, index_type.into(), ptr::null());
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum IndexType {
+    UnsignedByte,
+    UnsignedShort,
+    UnsignedInt,
+}
+
+impl convert::From<IndexType> for GLenum {
+    fn from(i: IndexType) -> GLenum {
+        match i {
+            IndexType::UnsignedByte => gl::UNSIGNED_BYTE,
+            IndexType::UnsignedShort => gl::UNSIGNED_SHORT,
+            IndexType::UnsignedInt => gl::UNSIGNED_INT,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, strum_macros::Display)]

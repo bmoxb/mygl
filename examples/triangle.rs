@@ -1,36 +1,16 @@
+mod shared;
+use shared::*;
+
 use mygl::rendering::DrawMode;
 use mygl::shaders::{FragmentShader, Shader, ShaderProgram, VertexShader};
 use mygl::vao::{AttribPointerType, BufferUsageHint, VertexArrayObjectBuilder, VertexBufferObject};
 
-use glutin::event::{Event, WindowEvent};
-use glutin::event_loop::{ControlFlow, EventLoop};
-use glutin::window::WindowBuilder;
-use glutin::{Api, ContextBuilder, ContextWrapper, GlRequest, PossiblyCurrent};
+example!(triangle);
 
-fn main() {
-    env_logger::init();
-
-    let el = EventLoop::new();
-    let wb = WindowBuilder::new().with_title("Triangles");
-
-    let windowed_context = ContextBuilder::new()
-        .with_gl(GlRequest::Specific(Api::OpenGl, (4, 3)))
-        .with_vsync(true)
-        .build_windowed(wb, &el)
-        .unwrap();
-    let windowed_context = unsafe { windowed_context.make_current().unwrap() };
-
-    if let Err(e) = run(el, windowed_context) {
-        eprintln!("{}", e);
-    }
-}
-
-fn run(
+fn triangle(
     el: EventLoop<()>,
     windowed_context: ContextWrapper<PossiblyCurrent, glutin::window::Window>,
 ) -> Result<(), mygl::Error> {
-    gl::load_with(|ptr| windowed_context.get_proc_address(ptr) as *const _);
-
     mygl::debug::set_error_callback(error_callback);
 
     let vert = VertexShader::from_file("examples/shaders/triangle.vert")?;
@@ -57,8 +37,10 @@ fn run(
         Event::MainEventsCleared => {
             mygl::clear(0.8, 0.2, 0.2, 1.0);
 
-            triangle_height += 0.002;
-            vbo.update_data(&[triangle_height], 7 * 4).unwrap();
+            if triangle_height < 0.8 {
+                triangle_height += 0.002;
+                vbo.update_data(&[triangle_height], 7 * 4).unwrap();
+            }
 
             mygl::rendering::draw_arrays(&prog, &vao, DrawMode::Triangles, 0, 6);
 

@@ -4,12 +4,12 @@ pub mod data_source;
 pub use builder::{AttribPointerType, VertexArrayObjectBuilder};
 pub use data_source::BufferDataSource;
 
-use std::fmt;
-use std::rc::Rc;
 use std::cell::RefCell;
 use std::cmp::PartialEq;
 use std::convert::{From, Into};
+use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 
 use gl::types::*;
 
