@@ -16,14 +16,19 @@ The **nightly** compiler toolchain is required due to the use of enums in consta
   * [x] Load data
   * [x] Update data (`glBufferSubData`)
   * [x] Resize/overwrite/clear data
-* [ ] Textures
-* [ ] Rendering
+* [x] Textures
+* [x] Rendering
   * [x] Draw arrays
-  * [ ] Draw elements
-  * [ ] Draw textures
+  * [x] Draw elements
+  * [x] Draw textures
 * [ ] Debugging features
   * [x] Allow setting a callback to be called on OpenGL error
   * [ ] Log all OpenGL operations
-* [ ] Full documentation
+* [ ] Comprehensive documentation
 * [ ] Comprehensive tests
 * [ ] Full `nalgebra` support
+* [ ] Full `image` support
+* Examples
+  * [x] Basic 2D drawing (triangles and squares, with and without textures)
+  * [ ] Basic 3D drawing (textured cubes)
+  * [ ] Render a 3D teapot
