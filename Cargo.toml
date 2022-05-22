@@ -4,17 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gl = "0.14"
-thiserror = "1.0"
-seq-macro = "0.3"
-paste = "1.0"
-log = "0.4"
-strum_macros = "0.24"
-nalgebra = { version = "0.31", optional = true }
-image = { version = "0.24", optional = true }
+gl = "0.14.0"
+thiserror = "1.0.31"
+seq-macro = "0.3.0"
+paste = "1.0.7"
+log = "0.4.17"
+strum_macros = "0.24.0"
+nalgebra = { version = "0.31.0", optional = true }
+image = { version = "0.24.2", optional = true }
 
 [dev-dependencies]
-glutin = "0.28"
-env_logger = "0.8"
-nalgebra = "0.31"
-image = "0.24"
+glutin = "0.28.0"
+env_logger = "0.9.0"
+nalgebra = "0.31.0"
+image = "0.24.2"
