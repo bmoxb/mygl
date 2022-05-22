@@ -19,7 +19,7 @@ fn texture(
 
     let vert = VertexShader::from_file("examples/shaders/texture.vert")?;
     let frag = FragmentShader::from_file("examples/shaders/texture.frag")?;
-    let prog = ShaderProgram::new(vert, frag)?;
+    let prog = ShaderProgram::new(&vert, &frag)?;
 
     let data: [f32; 15] = [
         -0.5, -0.5, 0.0, 0.0, 0.0, 0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 0.5, 0.0, 0.5, 1.0,

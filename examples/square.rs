@@ -18,7 +18,7 @@ fn square(
 
     let vert = VertexShader::from_file("examples/shaders/triangle.vert")?;
     let frag = FragmentShader::from_file("examples/shaders/triangle.frag")?;
-    let prog = ShaderProgram::new(vert, frag)?;
+    let prog = ShaderProgram::new(&vert, &frag)?;
 
     let uniform = [0.0, 0.9, 0.2];
     prog.set_uniform("myColour", &uniform)?;

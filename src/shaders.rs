@@ -57,7 +57,7 @@ impl<const T: ShaderType> fmt::Display for Shader<T> {
 
 impl<const T: ShaderType> Drop for Shader<T> {
     fn drop(&mut self) {
-        log::debug!("Deleting {}", self);
+        log::debug!("Flagged {} for deletion", self);
 
         unsafe {
             gl::DeleteShader(self.id);
@@ -89,10 +89,12 @@ pub struct ShaderProgram {
 }
 
 impl ShaderProgram {
-    pub fn new(vert: VertexShader, frag: FragmentShader) -> Result<Self, Error> {
+    pub fn new(vert: &VertexShader, frag: &FragmentShader) -> Result<Self, Error> {
         let id = unsafe { gl::CreateProgram() };
 
-        log::debug!("Created shader program {}", id);
+        let prog = ShaderProgram { id };
+
+        log::debug!("Created {}", prog);
 
         let mut success = gl::TRUE as GLint;
 
@@ -108,8 +110,6 @@ impl ShaderProgram {
             let msg = get_error_msg(id, gl::GetProgramiv, gl::GetProgramInfoLog)?;
             return Err(Error::Shader(ShaderError::Linking(msg)));
         }
-
-        let prog = ShaderProgram { id };
 
         log::debug!("Attached and linked {} and {} to {}", vert, frag, prog);
 
@@ -151,6 +151,8 @@ impl ShaderProgram {
 
 impl Drop for ShaderProgram {
     fn drop(&mut self) {
+        log::debug!("Deleting {}", self);
+
         unsafe {
             gl::DeleteProgram(self.id);
         }
