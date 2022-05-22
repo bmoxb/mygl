@@ -37,10 +37,7 @@ pub fn draw_arrays_with_textures<const T: TextureType>(
     count: i32,
     textures: &[&Texture<{ T }>],
 ) {
-    for (index, texture) in textures.iter().enumerate() {
-        texture.activate(index as u32);
-    }
-
+    activate_textures(textures);
     draw_arrays(prog, vao, mode, first, count);
 }
 
@@ -65,6 +62,18 @@ pub fn draw_elements(
     unsafe {
         gl::DrawElements(mode.into(), count, index_type.into(), ptr::null());
     }
+}
+
+pub fn draw_elements_with_textures<const T: TextureType>(
+    prog: &ShaderProgram,
+    vao: &VertexArrayObject,
+    index_type: IndexType,
+    mode: DrawMode,
+    count: i32,
+    textures: &[&Texture<{ T }>],
+) {
+    activate_textures(textures);
+    draw_elements(prog, vao, index_type, mode, count);
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -99,5 +108,11 @@ impl convert::From<DrawMode> for GLenum {
             DrawMode::Lines => gl::LINES,
             DrawMode::Triangles => gl::TRIANGLES,
         }
+    }
+}
+
+fn activate_textures<const T: TextureType>(textures: &[&Texture<{ T }>]) {
+    for (index, texture) in textures.iter().enumerate() {
+        texture.activate(index as u32);
     }
 }
