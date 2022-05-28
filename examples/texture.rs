@@ -69,7 +69,7 @@ fn texture(
                 &vao,
                 DrawMode::Triangles,
                 0,
-                6,
+                3,
                 &[&texture],
             );
 
