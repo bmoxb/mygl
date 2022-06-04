@@ -21,9 +21,9 @@ The **nightly** compiler toolchain is required due to the use of enums in consta
   * [x] Draw arrays
   * [x] Draw elements
   * [x] Draw textures
-* [ ] Debugging features
+* [x] Debugging features
   * [x] Allow setting a callback to be called on OpenGL error
-  * [ ] Log all OpenGL operations
+  * [x] Log all OpenGL operations
 * [ ] Comprehensive documentation
 * [ ] Comprehensive tests
 * [ ] Full `nalgebra` support
