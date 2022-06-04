@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::ffi::c_void;
 use std::{convert, fmt};
 
-use gl::types::*;
+use gl::{types::*, *};
+
+use crate::debug::gl;
 
 use super::{ElementBufferObject, VertexArrayObject, VertexBufferObject};
 
@@ -93,17 +95,15 @@ impl VertexArrayObjectBuilder {
             vbo.bind();
 
             for a in attrib_pointers {
-                unsafe {
-                    gl::VertexAttribPointer(
-                        a.layout_index,
-                        a.component_count as GLint,
-                        a.component_type.into(),
-                        a.normalize as GLboolean,
-                        a.stride as GLsizei,
-                        a.offset as *const c_void,
-                    );
-                    gl::EnableVertexAttribArray(a.layout_index);
-                }
+                gl!(VertexAttribPointer(
+                    a.layout_index,
+                    a.component_count as GLint,
+                    a.component_type.into(),
+                    a.normalize as GLboolean,
+                    a.stride as GLsizei,
+                    a.offset as *const c_void,
+                ));
+                gl!(EnableVertexAttribArray(a.layout_index));
 
                 log::debug!("Set up and enabled {}", a);
             }

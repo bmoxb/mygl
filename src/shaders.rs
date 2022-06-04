@@ -2,11 +2,12 @@ use std::ffi::CString;
 use std::fmt;
 use std::path::Path;
 
-use gl::types::*;
+use gl::{types::*, *};
 
 use paste::paste;
 use seq_macro::seq;
 
+use crate::debug::gl;
 use crate::error::{Error, ShaderError};
 
 pub struct Shader<const T: ShaderType> {
@@ -15,24 +16,22 @@ pub struct Shader<const T: ShaderType> {
 
 impl<const T: ShaderType> Shader<T> {
     pub fn from_source(src: &str) -> Result<Self, Error> {
-        let id = unsafe { gl::CreateShader(Into::into(T)) };
+        let id = gl!(CreateShader(Into::into(T)));
 
         let src_c_str = CString::new(src)?;
         let mut success = gl::TRUE as GLint;
 
-        unsafe {
-            let src_c_str_ptr: *const *const i8 = &src_c_str.as_ptr();
-            let null: *const i32 = std::ptr::null();
+        let src_c_str_ptr: *const *const i8 = &src_c_str.as_ptr();
+        let null: *const i32 = std::ptr::null();
 
-            gl::ShaderSource(id, 1, src_c_str_ptr, null);
-            gl::CompileShader(id);
+        gl!(ShaderSource(id, 1, src_c_str_ptr, null));
+        gl!(CompileShader(id));
 
-            let success_ptr: *mut i32 = &mut success;
-            gl::GetShaderiv(id, gl::COMPILE_STATUS, success_ptr);
-        }
+        let success_ptr: *mut i32 = &mut success;
+        gl!(GetShaderiv(id, gl::COMPILE_STATUS, success_ptr));
 
         if success as GLboolean == gl::FALSE {
-            let msg = get_error_msg(id, gl::GetShaderiv, gl::GetShaderInfoLog)?;
+            let msg = get_error_msg(id, GetShaderiv, GetShaderInfoLog)?;
             return Err(Error::Shader(ShaderError::Compilation(msg)));
         }
 
@@ -59,9 +58,7 @@ impl<const T: ShaderType> Drop for Shader<T> {
     fn drop(&mut self) {
         log::debug!("Flagged {} for deletion", self);
 
-        unsafe {
-            gl::DeleteShader(self.id);
-        }
+        gl!(DeleteShader(self.id));
     }
 }
 
@@ -90,7 +87,7 @@ pub struct ShaderProgram {
 
 impl ShaderProgram {
     pub fn new(vert: &VertexShader, frag: &FragmentShader) -> Result<Self, Error> {
-        let id = unsafe { gl::CreateProgram() };
+        let id = gl!(CreateProgram());
 
         let prog = ShaderProgram { id };
 
@@ -98,16 +95,14 @@ impl ShaderProgram {
 
         let mut success = gl::TRUE as GLint;
 
-        unsafe {
-            gl::AttachShader(id, vert.id);
-            gl::AttachShader(id, frag.id);
-            gl::LinkProgram(id);
+        gl!(AttachShader(id, vert.id));
+        gl!(AttachShader(id, frag.id));
+        gl!(LinkProgram(id));
 
-            gl::GetProgramiv(id, gl::LINK_STATUS, &mut success);
-        }
+        gl!(GetProgramiv(id, gl::LINK_STATUS, &mut success));
 
         if success as GLboolean == gl::FALSE {
-            let msg = get_error_msg(id, gl::GetProgramiv, gl::GetProgramInfoLog)?;
+            let msg = get_error_msg(id, GetProgramiv, GetProgramInfoLog)?;
             return Err(Error::Shader(ShaderError::Linking(msg)));
         }
 
@@ -120,7 +115,7 @@ impl ShaderProgram {
         self.use_program();
 
         let key_c_str = CString::new(key)?;
-        let location = unsafe { gl::GetUniformLocation(self.id, key_c_str.as_ptr()) };
+        let location = gl!(GetUniformLocation(self.id, key_c_str.as_ptr()));
 
         if location == -1 {
             return Err(Error::Shader(ShaderError::UniformName(key.to_string())));
@@ -141,9 +136,7 @@ impl ShaderProgram {
     }
 
     pub fn use_program(&self) {
-        unsafe {
-            gl::UseProgram(self.id);
-        }
+        gl!(UseProgram(self.id));
 
         log::trace!("Using {}", self);
     }
@@ -153,9 +146,7 @@ impl Drop for ShaderProgram {
     fn drop(&mut self) {
         log::debug!("Deleting {}", self);
 
-        unsafe {
-            gl::DeleteProgram(self.id);
-        }
+        gl!(DeleteProgram(self.id));
     }
 }
 
@@ -174,9 +165,7 @@ macro_rules! uniform {
     ($impl_type:ty, $gl_type:ty, $fun:path) => {
         impl UniformValue for $impl_type {
             fn set(self, location: GLint) {
-                unsafe {
-                    $fun(location, self as $gl_type);
-                }
+                gl!($fun(location, self as $gl_type));
             }
             fn ty(&self) -> &str {
                 stringify!($impl_type)
@@ -187,9 +176,7 @@ macro_rules! uniform {
     ($base_type:ty, $len:expr, $fun_suffix:ident) => {
         impl UniformValue for &[$base_type; $len] {
             fn set(self, location: GLint) {
-                unsafe {
-                    paste! { gl::[< Uniform $len $fun_suffix >](location, 1, self.as_ptr()); }
-                }
+                paste! { gl!([< Uniform $len $fun_suffix >](location, 1, self.as_ptr())); }
             }
             fn ty(&self) -> &str {
                 stringify!([$base_type; $len])
@@ -198,9 +185,9 @@ macro_rules! uniform {
     };
 }
 
-uniform!(f32, GLfloat, gl::Uniform1f);
-uniform!(i32, GLint, gl::Uniform1i);
-uniform!(u32, GLuint, gl::Uniform1ui);
+uniform!(f32, GLfloat, Uniform1f);
+uniform!(i32, GLint, Uniform1i);
+uniform!(u32, GLuint, Uniform1ui);
 
 seq!(N in 1..=4 {
     uniform!(f32, N, fv);
@@ -208,7 +195,7 @@ seq!(N in 1..=4 {
     uniform!(u32, N, uiv);
 });
 
-uniform!(bool, GLint, gl::Uniform1i);
+uniform!(bool, GLint, Uniform1i);
 
 #[cfg(feature = "nalgebra")]
 mod nalgebra_uniforms {
@@ -217,16 +204,16 @@ mod nalgebra_uniforms {
 
     macro_rules! gl_uniform_matrix {
         (2, 2) => {
-            paste! { gl::[< UniformMatrix2 fv >] }
+            paste! { [< UniformMatrix2 fv >] }
         };
         (3, 3) => {
-            paste! { gl::[< UniformMatrix3 fv >] }
+            paste! { [< UniformMatrix3 fv >] }
         };
         (4, 4) => {
-            paste! { gl::[< UniformMatrix4 fv >] }
+            paste! { [< UniformMatrix4 fv >] }
         };
         ($rows:expr, $columns:expr) => {
-            paste! { gl::[< UniformMatrix $rows x $columns fv >] }
+            paste! { [< UniformMatrix $rows x $columns fv >] }
         };
     }
 
@@ -238,9 +225,7 @@ mod nalgebra_uniforms {
                     T: fmt::Debug + na::Storage<f32, na::[< U $rows >], na::[< U $columns >]>
                 {
                     fn set(self, location: GLint) {
-                        unsafe {
-                            gl_uniform_matrix!($rows, $columns)(location, 1, gl::FALSE, self.as_ptr());
-                        }
+                        gl!(gl_uniform_matrix!($rows, $columns)(location, 1, gl::FALSE, self.as_ptr()));
                     }
                     fn ty(&self) -> &str { stringify!(Matrix<f32, $rows, $columns>) }
                 }

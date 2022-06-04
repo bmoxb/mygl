@@ -11,8 +11,9 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
-use gl::types::*;
+use gl::{types::*, *};
 
+use crate::debug::gl;
 use crate::error::{BufferError, Error};
 
 pub struct VertexArrayObject {
@@ -25,9 +26,7 @@ impl VertexArrayObject {
     fn new() -> Self {
         let mut id = 0;
 
-        unsafe {
-            gl::GenVertexArrays(1, &mut id);
-        }
+        gl!(GenVertexArrays(1, &mut id));
 
         let vao = VertexArrayObject {
             id,
@@ -41,9 +40,7 @@ impl VertexArrayObject {
     }
 
     pub fn bind(&self) {
-        unsafe {
-            gl::BindVertexArray(self.id);
-        }
+        gl!(BindVertexArray(self.id));
 
         log::trace!("Bound {}", self);
     }
@@ -53,9 +50,7 @@ impl Drop for VertexArrayObject {
     fn drop(&mut self) {
         log::debug!("Deleting {}", self);
 
-        unsafe {
-            gl::DeleteVertexArrays(1, &self.id);
-        }
+        gl!(DeleteVertexArrays(1, &self.id));
     }
 }
 
@@ -90,9 +85,7 @@ impl<const T: BufferType> BufferObject<T> {
     pub fn new(data: impl BufferDataSource, usage: BufferUsageHint) -> Self {
         let mut id = 0;
 
-        unsafe {
-            gl::GenBuffers(1, &mut id);
-        }
+        gl!(GenBuffers(1, &mut id));
 
         let bo = BufferObject {
             id,
@@ -122,14 +115,12 @@ impl<const T: BufferType> BufferObject<T> {
 
         self.bind();
 
-        unsafe {
-            gl::BufferSubData(
-                Into::into(T),
-                offset as GLintptr,
-                data.size() as GLsizeiptr,
-                data.ptr(),
-            );
-        }
+        gl!(BufferSubData(
+            Into::into(T),
+            offset as GLintptr,
+            data.size() as GLsizeiptr,
+            data.ptr(),
+        ));
 
         log::trace!(
             "Modified data in {} by setting {} bytes from offset {}",
@@ -144,14 +135,12 @@ impl<const T: BufferType> BufferObject<T> {
     pub fn allocate_data(&self, data: impl BufferDataSource) {
         self.bind();
 
-        unsafe {
-            gl::BufferData(
-                Into::into(T),
-                data.size() as GLsizeiptr,
-                data.ptr(),
-                self.inner.borrow().usage.into(),
-            );
-        }
+        gl!(BufferData(
+            Into::into(T),
+            data.size() as GLsizeiptr,
+            data.ptr(),
+            self.inner.borrow().usage.into(),
+        ));
 
         self.inner.borrow_mut().allocated_size = data.size();
 
@@ -159,9 +148,7 @@ impl<const T: BufferType> BufferObject<T> {
     }
 
     fn bind(&self) {
-        unsafe {
-            gl::BindBuffer(Into::into(T), self.id);
-        }
+        gl!(BindBuffer(Into::into(T), self.id));
 
         log::trace!("Bound {}", self);
     }
@@ -201,9 +188,7 @@ impl Drop for BufferObjectInner {
     fn drop(&mut self) {
         log::debug!("Deleting {} buffer object {}", self.buf_type, self.id);
 
-        unsafe {
-            gl::DeleteBuffers(1, &self.id);
-        }
+        gl!(DeleteBuffers(1, &self.id));
     }
 }
 

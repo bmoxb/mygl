@@ -9,8 +9,9 @@
 
 use std::{convert, ptr};
 
-use gl::types::*;
+use gl::{types::*, *};
 
+use crate::debug::gl;
 use crate::shaders::ShaderProgram;
 use crate::textures::{Texture, TextureType};
 use crate::vao::VertexArrayObject;
@@ -80,9 +81,7 @@ pub fn draw_arrays(
         mode
     );
 
-    unsafe {
-        gl::DrawArrays(mode.into(), first, count);
-    }
+    gl!(DrawArrays(mode.into(), first, count));
 }
 
 /**
@@ -137,9 +136,12 @@ pub fn draw_elements(
         mode
     );
 
-    unsafe {
-        gl::DrawElements(mode.into(), count, index_type.into(), ptr::null());
-    }
+    gl!(DrawElements(
+        mode.into(),
+        count,
+        index_type.into(),
+        ptr::null()
+    ));
 }
 
 /**

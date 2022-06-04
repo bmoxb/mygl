@@ -10,6 +10,10 @@ pub mod vao;
 
 pub use error::Error;
 
+use gl::*;
+
+use debug::gl;
+
 /**
  * Clears the screen in the color specified.
  *
@@ -17,10 +21,8 @@ pub use error::Error;
  * inclusive.
  */
 pub fn clear(r: f32, g: f32, b: f32, a: f32) {
-    unsafe {
-        gl::ClearColor(r, g, b, a);
-        gl::Clear(gl::COLOR_BUFFER_BIT);
-    }
+    gl!(ClearColor(r, g, b, a));
+    gl!(Clear(gl::COLOR_BUFFER_BIT));
 }
 
 /**
@@ -30,9 +32,7 @@ pub fn clear(r: f32, g: f32, b: f32, a: f32) {
  * Equivalent to: `glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)`
  */
 pub fn enable_wireframe_rendering() {
-    unsafe {
-        gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
-    }
+    gl!(PolygonMode(gl::FRONT_AND_BACK, gl::LINE));
 }
 
 /**
@@ -41,9 +41,7 @@ pub fn enable_wireframe_rendering() {
  * Equivalent to: `glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)`
  */
 pub fn disable_wireframe_rendering() {
-    unsafe {
-        gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-    }
+    gl!(PolygonMode(gl::FRONT_AND_BACK, gl::FILL));
 }
 
 #[cfg(test)]

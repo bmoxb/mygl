@@ -1,11 +1,27 @@
 use std::ffi::{c_void, CString};
 use std::{mem, slice};
 
-use gl::types::*;
+use gl::{types::*, *};
+
+macro_rules! gl {
+    ($f:expr) => {{
+        log::trace!("- gl{} -", stringify!($f));
+
+        #[allow(unused_unsafe)]
+        unsafe {
+            $f
+        }
+    }};
+}
+
+pub(crate) use gl;
 
 pub fn set_error_callback(callback: fn(&str)) {
+    gl!(DebugMessageCallback(
+        Some(error_callback),
+        callback as *const c_void
+    ));
     log::debug!("Error callback function set");
-    unsafe { gl::DebugMessageCallback(Some(error_callback), callback as *const c_void) }
 }
 
 extern "system" fn error_callback(

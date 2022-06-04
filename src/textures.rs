@@ -3,7 +3,9 @@ use std::convert::{From, Into};
 use std::ffi::c_void;
 use std::fmt;
 
-use gl::types::*;
+use gl::{types::*, *};
+
+use crate::debug::gl;
 
 pub struct Texture<const T: TextureType> {
     id: GLuint,
@@ -19,9 +21,7 @@ impl<const T: TextureType> Texture<T> {
             );
         }
 
-        unsafe {
-            gl::ActiveTexture(gl::TEXTURE0 + index);
-        }
+        gl!(ActiveTexture(gl::TEXTURE0 + index));
         self.bind();
 
         log::trace!("Activated and bound {} at GL_TEXTURE{}", self, index);
@@ -32,9 +32,7 @@ impl<const T: TextureType> Texture<T> {
     }
 
     fn bind(&self) {
-        unsafe {
-            gl::BindTexture(Into::into(T), self.id);
-        }
+        gl!(BindTexture(Into::into(T), self.id));
     }
 }
 
@@ -42,9 +40,7 @@ impl<const T: TextureType> Drop for Texture<T> {
     fn drop(&mut self) {
         log::debug!("Deleting {}", self);
 
-        unsafe {
-            gl::DeleteTextures(1, &self.id);
-        }
+        gl!(DeleteTextures(1, &self.id));
     }
 }
 
@@ -99,47 +95,39 @@ impl<'a, I: Image, const T: TextureType> TextureBuilder<'a, I, T> {
     pub fn build(self) -> Texture<{ T }> {
         let mut id = 0;
 
-        unsafe {
-            gl::GenTextures(1, &mut id);
-        }
+        gl!(GenTextures(1, &mut id));
 
         let texture = Texture { id };
 
         texture.bind();
 
         for (key, parameter) in self.parameters {
-            unsafe {
-                match parameter {
-                    //Parameter::Float(f) => gl::TexParameterf(Into::into(T), key, f),
-                    Parameter::Int(i) => gl::TexParameteri(Into::into(T), key, i),
-                    Parameter::Floats(fv) => gl::TexParameterfv(Into::into(T), key, fv.as_ptr()),
-                }
+            match parameter {
+                //Parameter::Float(f) => gl!(TexParameterf(Into::into(T), key, f)),
+                Parameter::Int(i) => gl!(TexParameteri(Into::into(T), key, i)),
+                Parameter::Floats(fv) => gl!(TexParameterfv(Into::into(T), key, fv.as_ptr())),
             }
         }
 
-        unsafe {
-            match T {
-                TextureType::Texture2D => {
-                    gl::TexImage2D(
-                        Into::into(T),
-                        0,
-                        gl::RGB as i32,
-                        self.img.width() as i32,
-                        self.img.height() as i32,
-                        0,
-                        self.img.format(),
-                        self.img.ty(),
-                        self.img.ptr(),
-                    );
-                }
-                _ => unimplemented!(),
+        match T {
+            TextureType::Texture2D => {
+                gl!(TexImage2D(
+                    Into::into(T),
+                    0,
+                    gl::RGB as i32,
+                    self.img.width() as i32,
+                    self.img.height() as i32,
+                    0,
+                    self.img.format(),
+                    self.img.ty(),
+                    self.img.ptr(),
+                ));
             }
+            _ => unimplemented!(),
         }
 
         if self.generate_mipmap {
-            unsafe {
-                gl::GenerateMipmap(Into::into(T));
-            }
+            gl!(GenerateMipmap(Into::into(T)));
         }
 
         texture
